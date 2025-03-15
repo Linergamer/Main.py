@@ -1,2 +1,4 @@
-aiogram
-openai
+Flask==3.0.0
+pyTelegramBotAPI==4.15.3
+openai==1.15.0
+gunicorn==21.2.0
