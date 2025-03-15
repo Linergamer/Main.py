@@ -1,44 +1,43 @@
+import os
+import logging
+from flask import Flask, request
 import openai
-import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import Message
-from aiogram.filters import Command
+import telebot
 
-# Tokenlarni shu yerga qo‘ying
-TELEGRAM_BOT_TOKEN = "7672420157:AAFEuXNxT13dzBJws9CBE5iYBPqwaCnSeNM"
-OPENAI_API_KEY = "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"
+# Telegram va OpenAI API kalitlarini olish
+TELEGRAM_TOKEN = os.getenv("7672420157:AAFEuXNxT13dzBJws9CBE5iYBPqwaCnSeNM")
+OPENAI_API_KEY = os.getenv("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")
 
-# OpenAI API sozlamalari
+# Kutubxonalarni sozlash
+bot = telebot.TeleBot(TELEGRAM_TOKEN)
 openai.api_key = OPENAI_API_KEY
 
-# Aiogram bot va dispatcher
-bot = Bot(token=TELEGRAM_BOT_TOKEN)
-dp = Dispatcher()
+# Flask serverini yaratish
+app = Flask(name)
 
-# Start buyrug'iga javob
-@dp.message(Command("start"))
-async def start_command(message: Message):
-    await message.answer("Salom! Men OpenAI bilan bog‘langan Telegram botiman. Savollaringizni yozing!")
+# Telegram webhook uchun endpoint
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    json_str = request.get_data().decode("UTF-8")
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return "!", 200
 
-# Foydalanuvchi xabariga javob
-@dp.message()
-async def chat_with_ai(message: Message):
-    user_text = message.text
-    
-    # OpenAI orqali javob olish
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo", 
-        messages=[{"role": "user", "content": user_text}]
-    )
+# Botga kelgan xabarlarni OpenAI bilan qayta ishlash
+@bot.message_handler(func=lambda message: True)
+def handle_message(message):
+    try:
+        response = openai.Chat.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": message.text}]
+        )
+        bot.reply_to(message, response.choices[0].message["content"])
+    except Exception as e:
+        bot.reply_to(message, "Xatolik yuz berdi. Keyinroq urinib ko‘ring.")
+        logging.error(f"OpenAI xatosi: {e}")
 
-    # ChatGPT javobi
-    bot_reply = response["choices"][0]["message"]["content"]
-    
-    await message.answer(bot_reply)
-
-# Botni ishga tushirish
-async def main():
-    await dp.start_polling(bot)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# Flask serverini ishga tushirish
+if name == "main":
+    bot.remove_webhook()
+    bot.set_webhook(url="https://your-render-app-url.com/webhook")
+    app.run(host="0.0.0.0", port=5000)
