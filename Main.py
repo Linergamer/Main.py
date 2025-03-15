@@ -13,7 +13,7 @@ bot = telebot.TeleBot(TELEGRAM_TOKEN)
 openai.api_key = OPENAI_API_KEY
 
 # Flask serverini yaratish
-app = Flask(name)
+app = Flask(__name__)
 
 # Telegram webhook uchun endpoint
 @app.route("/webhook", methods=["POST"])
